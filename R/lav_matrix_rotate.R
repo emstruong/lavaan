@@ -107,6 +107,8 @@ lav_matrix_rotate <- function(a = NULL, # original matrix
     method_fname <- "lav_matrix_rotate_bigeomin"
   } else if (method == "target.strict") {
     method_fname <- "lav_matrix_rotate_target"
+  } else if (method %in% c("target.alf", "target-alf", "targetalf")) {
+    method_fname <- "lav_matrix_rotate_target_alf"
   } else {
     method_fname <- paste("lav_matrix_rotate_", method, sep = "")
   }
@@ -118,7 +120,8 @@ lav_matrix_rotate <- function(a = NULL, # original matrix
   }
 
   # if target, check target matrix
-  if (method == "target.strict" || method == "pst") {
+  if (method == "target.strict" || method == "pst" ||
+      method %in% c("target.alf", "target-alf", "targetalf")) {
     target <- method_args$target
   if (is.list(target)) {
     method_args$target <- target <- target[[group]]
@@ -142,6 +145,21 @@ lav_matrix_rotate <- function(a = NULL, # original matrix
     }
     if (ncol(target_mask) != ncol(a)) {
       lav_msg_stop(gettext("col(target.mask) != ncol(A)"))
+    }
+  }
+  # target.alf: target.mask is optional; only validate when supplied.
+  if (method %in% c("target.alf", "target-alf", "targetalf")) {
+    target_mask <- method_args$target.mask
+    if (is.list(target_mask)) {
+      method_args$target.mask <- target_mask <- target_mask[[group]]
+    }
+    if (!is.null(target_mask) && length(target_mask) > 0L) {
+      if (nrow(target_mask) != nrow(a)) {
+        lav_msg_stop(gettext("nrow(target.mask) != nrow(A)"))
+      }
+      if (ncol(target_mask) != ncol(a)) {
+        lav_msg_stop(gettext("ncol(target.mask) != ncol(A)"))
+      }
     }
   }
   # we keep this here, so lav_matrix_rotate() can be used independently

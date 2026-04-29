@@ -250,7 +250,10 @@ lav_options_default <- function() {
     cf.quartimax = "cf-quartimax", cf.varimax = "cf-varimax",
     cf.equamax = "cf-equamax", cf.parsimax = "cf-parsimax",
     cf.facparsim = "cf-facparsim", bi.quartimin = "biquartimin",
-    biquartimin = "biquartimin", bi.geomin = "bigeomin", bigeomin = "bigeomin"
+    biquartimin = "biquartimin", bi.geomin = "bigeomin", bigeomin = "bigeomin",
+    sefa = "sefa", alf = "alf",
+    target.alf = "target.alf", `target-alf` = "target.alf",
+    targetalf = "target.alf"
   ))
   elm("rotation.se", "bordered", chr = c("delta", "bordered"))
 
@@ -268,6 +271,7 @@ lav_options_default <- function() {
   elm(c("rotation.args", "promax.kappa"), 4, nm = "[0, 1000]")
   elm(c("rotation.args", "target"), matrix(0, 0L, 0L), oklen = c(0, 1e+32))
   elm(c("rotation.args", "target.mask"), matrix(0, 0L, 0L), oklen = c(0, 1e+32))
+  elm(c("rotation.args", "alf.epsilon"), 1e-04, nm = "]0, 1.00]")
   elm(c("rotation.args", "rstarts"), 30L, nm = "[0, 1e+07]")
   elm(c("rotation.args", "algorithm"), "gpa", chr = c("gpa", "pairwise"))
   elm(c("rotation.args", "reflect"), TRUE, bl = TRUE)

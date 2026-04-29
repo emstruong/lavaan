@@ -512,6 +512,100 @@ lav_matrix_rotate_pst <- function(LAMBDA = NULL, target = NULL,            # nol
 }
 
 
+# Absolute-value Loss Function (ALF) penalty
+#
+# Asparouhov & Muthen (2024a, 2025); used by SEFA / DSEFA / Target-ALF.
+# F(LAMBDA) = sum_{ij} sqrt(LAMBDA_{ij}^2 + alf_epsilon)
+# A smoothed L1 penalty: behaves like |lambda| for large |lambda| but is
+# differentiable at 0, with gradient lambda / sqrt(lambda^2 + epsilon).
+#
+lav_matrix_rotate_alf <- function(LAMBDA = NULL,                       # nolint
+                                  alf_epsilon = 1e-04,
+                                  ..., grad = FALSE) {
+  l2 <- LAMBDA * LAMBDA + alf_epsilon
+  s <- sqrt(l2)
+
+  out <- sum(s)
+
+  if (grad) {
+    attr(out, "grad") <- LAMBDA / s
+  }
+
+  out
+}
+
+# Target-ALF rotation criterion
+#
+# Asparouhov & Muthen (2024a) section 4.2. Replaces the L2 (squared)
+# discrepancy of Target with a smoothed-L1 (ALF) discrepancy. For positions
+# where target.mask == 0 the loadings are unconstrained.
+#
+# F(LAMBDA) = sum_{ij} M_{ij} * sqrt((LAMBDA_{ij} - T_{ij})^2 + epsilon)
+#
+# Robust to incorrectly specified targets (paper section 4.2): unlike L2
+# Target, small but nonzero true loadings whose targets are mistakenly set
+# to 0 do not bias the rotation as strongly because the ALF penalty grows
+# linearly rather than quadratically with the discrepancy.
+#
+lav_matrix_rotate_target_alf <- function(LAMBDA = NULL, target = NULL,  # nolint
+                                         target.mask = NULL,            # nolint
+                                         alf_epsilon = 1e-04,
+                                         ..., grad = FALSE) {
+  # treat 0-by-0 defaults from rotation.args as "not supplied"
+  if (is.null(target.mask) || length(target.mask) == 0L) {
+    target.mask <- matrix(1, nrow(LAMBDA), ncol(LAMBDA))                # nolint
+  }
+  if (is.null(target) || length(target) == 0L) {
+    target <- matrix(0, nrow(LAMBDA), ncol(LAMBDA))
+  }
+
+  diff_1 <- LAMBDA - target
+  diff_1[is.na(diff_1)] <- 0
+  d2 <- diff_1 * diff_1 + alf_epsilon
+  s <- sqrt(d2)
+
+  out <- sum(target.mask * s, na.rm = TRUE)
+
+  if (grad) {
+    tmp <- target.mask * diff_1 / s
+    tmp[is.na(tmp)] <- 0
+    attr(out, "grad") <- tmp
+  }
+
+  out
+}
+
+# SEFA rotation criterion
+#
+# Asparouhov & Muthen (2026) "A Unification of Second-Order and Bi-Factor EFA".
+# Section 3 establishes that SEFA with m1 first-order factors has the same
+# data fit as oblique EFA with m1 factors. The first-order rotation is driven
+# by the Geomin penalty on LAMBDA1 (paper eq. 4 / eq. 11), which is what we
+# minimize here. The second-order structure (LAMBDA2, residual variances) is
+# extracted post-rotation by lav_efa_sefa_extract() from the resulting factor
+# correlation matrix Phi.
+#
+# This is therefore an alias for geomin at the rotation level; the SEFA-
+# specific contribution lives in the post-processing step that fits a
+# 1-factor (or higher-order) model to Phi, with the variance constraint
+# Var(xi_i) = 1 - lambda2_i^2 (paper eq. 6).
+#
+lav_matrix_rotate_sefa <- function(LAMBDA = NULL,                       # nolint
+                                   geomin_epsilon = 0.1,
+                                   ..., grad = FALSE) {
+  # Paper recommends geomin prior variance ~ 0.1 as the default for SEFA
+  # (section 3, "comparable fit is obtained with geomin prior variance of
+  # 0.1"). The numerical default in lav_matrix_rotate_geomin is 0.01; we
+  # keep the SEFA-specific default at 0.1 to match the paper's calibration.
+  lav_matrix_rotate_geomin(
+    LAMBDA = LAMBDA,
+    geomin_epsilon = geomin_epsilon,
+    ...,
+    grad = grad
+  )
+}
+
+
 # bi-quartimin
 #
 # Jennrich & Bentler 2011
@@ -802,11 +896,44 @@ ilav_matrix_rotate_grad_test_all <- function() {         # nolint
     cat("biquartimin: FAILED\n")
   }
 
-  # bi-quartimin
+  # bi-geomin
   check <- ilav_matrix_rotate_grad_test(crit = lav_matrix_rotate_bigeomin)
   if (is.logical(check) && check) {
     cat("bigeomin: OK\n")
   } else {
     cat("bigeomin: FAILED\n")
+  }
+
+  # SEFA (Asparouhov & Muthen 2026)
+  check <- ilav_matrix_rotate_grad_test(crit = lav_matrix_rotate_sefa)
+  if (is.logical(check) && check) {
+    cat("sefa: OK\n")
+  } else {
+    cat("sefa: FAILED\n")
+  }
+
+  # ALF (Asparouhov & Muthen 2024a)
+  check <- ilav_matrix_rotate_grad_test(crit = lav_matrix_rotate_alf)
+  if (is.logical(check) && check) {
+    cat("alf: OK\n")
+  } else {
+    cat("alf: FAILED\n")
+  }
+
+  # Target-ALF: target = zero matrix, mask = ones
+  set.seed(1)
+  test_lambda <- matrix(stats::rnorm(20L * 5L), 20L, 5L)
+  test_target <- matrix(0, 20L, 5L)
+  test_mask <- matrix(1, 20L, 5L)
+  check <- ilav_matrix_rotate_grad_test(
+    crit = lav_matrix_rotate_target_alf,
+    LAMBDA = test_lambda,
+    target = test_target,
+    target.mask = test_mask
+  )
+  if (is.logical(check) && check) {
+    cat("target.alf: OK\n")
+  } else {
+    cat("target.alf: FAILED\n")
   }
 }
