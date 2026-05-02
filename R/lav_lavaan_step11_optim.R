@@ -102,6 +102,20 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
         silent = TRUE
       )
 
+      # Stan (cmdstanr / rstan) -- optim.method = "stan"
+    } else if (lavoptions$optim.method == "stan") {
+      x <- try(
+        lav_optim_stan(
+          lavmodel = lavmodel,
+          lavpartable = lavpartable,
+          lavsamplestats = lavsamplestats,
+          lavdata = lavdata,
+          lavoptions = lavoptions,
+          lavcache = lavcache
+        ),
+        silent = FALSE
+      )
+
       # Quasi-Newton
     } else {
       # for backwards compatibility (<0.6)

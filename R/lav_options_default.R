@@ -421,8 +421,10 @@ lav_options_default <- function() {
   elm("control", list(), oklen = c(0L, 100L))
   elm("optim.method", "default", chr = c(
     "nlminb", "nlminb0", "nlminb1", "nlminb2",
-    "bfgs", "l.bfgs.b", "gn", "default", "noniter", "none", "em"
-  )) # gn for DLS, nlminb rest
+    "bfgs", "l.bfgs.b", "gn", "default", "noniter", "none", "em",
+    "stan"
+  )) # gn for DLS, nlminb rest, stan for cmdstanr/rstan backend
+  elm("stan.backend", "auto", chr = c("auto", "cmdstanr", "rstan"))
   elm("optim.attempts", 4L, nm = "[1, 4]")
   elm("optim.force.converged", FALSE, bl = TRUE)
   elm("optim.gradient", "analytic", chr = c(

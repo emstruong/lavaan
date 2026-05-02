@@ -61,6 +61,8 @@ Description: Fit a variety of latent variable models, including confirmatory
 Depends: R(>= 3.4)
 Imports: methods, stats4, stats, utils, graphics, MASS,
          mnormt, pbivnorm, numDeriv, quadprog
+Suggests: cmdstanr (>= 0.7.0), rstan (>= 2.26.0), digest, testthat (>= 3.0.0)
+Additional_repositories: https://stan-dev.r-universe.dev
 BugReports: https://github.com/yrosseel/lavaan/issues
 License: GPL (>= 2)
 LazyData: yes
