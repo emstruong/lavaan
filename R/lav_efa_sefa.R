@@ -56,6 +56,13 @@ lav_efa_sefa_fit_phi <- function(phi,                        # nolint
     ))
   }
 
+  # numerical floor on |lambda2_i| to keep theta_i = 1 - lambda2_i^2 from
+  # going to zero / negative during the inner solve. Distinct from the
+  # heywood_tol used for *reporting* Heywood: the floor is just to keep
+  # the numerics well-conditioned, while heywood_tol governs the user-
+  # facing diagnostic.
+  numeric_floor <- 1e-08
+
   # initial values: signed sqrt of average off-diagonal column sum,
   # bounded away from 1 to avoid Heywood at the start.
   off <- phi
@@ -79,8 +86,8 @@ lav_efa_sefa_fit_phi <- function(phi,                        # nolint
         next
       }
       new_val <- sum(others * rhs) / denom
-      # bound away from |1| to avoid second-order Heywood
-      max_abs <- 1 - heywood_tol
+      # tight numerical floor so theta stays positive
+      max_abs <- 1 - numeric_floor
       if (abs(new_val) > max_abs) {
         new_val <- sign(new_val) * max_abs
       }
@@ -93,7 +100,10 @@ lav_efa_sefa_fit_phi <- function(phi,                        # nolint
   }
 
   theta <- 1 - lambda2 * lambda2
-  heywood <- any(theta < heywood_tol)
+  # Report Heywood when any second-order communality is at or above
+  # 1 - heywood_tol (equivalently, theta_i <= heywood_tol). See paper
+  # p. 6 for the second-order Heywood phenomenon.
+  heywood <- any(theta <= heywood_tol)
 
   implied <- tcrossprod(lambda2) + diag(theta)
   residual <- phi - implied

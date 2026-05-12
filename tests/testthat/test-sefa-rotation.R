@@ -106,11 +106,21 @@ test_that("SEFA second-order extraction produces consistent Lambda2", {
 })
 
 test_that("SEFA extractor flags Heywood when |lambda2| approaches 1", {
-  # Construct a Phi where the implied lambda2 ~ 1 -- a near-Heywood case.
-  l2_true <- c(0.99, 0.97, 0.98)
+  # Construct a Phi where the implied lambda2 ~ 1 -- a clear Heywood case.
+  # 1 - 0.9999^2 ~= 2e-4, which is below the default heywood_tol = 1e-3.
+  l2_true <- c(0.9999, 0.9998, 0.9997)
   phi <- tcrossprod(l2_true) + diag(1 - l2_true^2)
   ext <- lavaan:::lav_efa_sefa_extract(phi)
   expect_true(ext$heywood)
+})
+
+test_that("SEFA extractor does NOT flag Heywood for moderate loadings", {
+  # Red-Team probe: defend against an over-eager Heywood detector that
+  # would scream on perfectly ordinary second-order solutions.
+  l2_true <- c(0.7, 0.6, 0.8)
+  phi <- tcrossprod(l2_true) + diag(1 - l2_true^2)
+  ext <- lavaan:::lav_efa_sefa_extract(phi)
+  expect_false(ext$heywood)
 })
 
 test_that("SEFA extractor errors on a non-square or non-PD-like input", {
@@ -127,11 +137,9 @@ test_that("efa(rotation = 'sefa') runs on HolzingerSwineford1939", {
   hs <- lavaan::HolzingerSwineford1939
   fit_sefa <- try(
     lavaan::efa(data = hs[, paste0("x", 1:9)], nfactors = 3L,
-                rotation = "sefa",
-                rotation.args = list(orthogonal = FALSE)),
+                rotation = list("sefa", orthogonal = FALSE)),
     silent = TRUE
   )
-  # Smoke test: rotation = "sefa" must be a recognised method.
   expect_false(inherits(fit_sefa, "try-error"))
 })
 
@@ -146,9 +154,25 @@ test_that("efa(rotation = 'target.alf') is recognised", {
   target[is.na(target)] <- 0
   fit <- try(
     lavaan::efa(data = hs[, paste0("x", 1:9)], nfactors = 3L,
-                rotation = "target.alf",
-                rotation.args = list(target = target, target.mask = mask)),
+                rotation = list("target.alf", target = target,
+                                target.mask = mask)),
     silent = TRUE
   )
   expect_false(inherits(fit, "try-error"))
+})
+
+test_that("lavSefaExtract recovers Lambda2 from a fitted efa() object", {
+  skip_on_cran()
+  hs <- lavaan::HolzingerSwineford1939
+  fit_sefa <- try(
+    lavaan::efa(data = hs[, paste0("x", 1:9)], nfactors = 3L,
+                rotation = list("sefa", orthogonal = FALSE)),
+    silent = TRUE
+  )
+  skip_if(inherits(fit_sefa, "try-error"))
+  ext <- try(lavaan::lavSefaExtract(fit_sefa), silent = TRUE)
+  expect_false(inherits(ext, "try-error"))
+  expect_true(ext$converged)
+  # 3 first-order factors -> 3 second-order loadings
+  expect_equal(length(ext$theta), 3L)
 })

@@ -112,6 +112,8 @@ lav_matrix_rotate_mg <- function(a_list = NULL, # original matrices
     method_fname <- "lav_matrix_rotate_bigeomin"
   } else if (method == "target.strict") {
     method_fname <- "lav_matrix_rotate_target"
+  } else if (method %in% c("target.alf", "target-alf", "targetalf")) {
+    method_fname <- "lav_matrix_rotate_target_alf"
   } else {
     method_fname <- paste("lav_matrix_rotate_", method, sep = "")
   }

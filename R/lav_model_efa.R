@@ -571,6 +571,8 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
         )
       } else if (method == "target.strict") {
         method.fname <- "lav_matrix_rotate_target"
+      } else if (method %in% c("target.alf", "target-alf", "targetalf")) {
+        method.fname <- "lav_matrix_rotate_target_alf"
       } else {
         method.fname <- paste("lav_matrix_rotate_", method, sep = "")
       }
